@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Petland Bom Fim - Estoque Banho e Tosa</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Nunito+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{--verde:#1B5E20;--verde-md:#2E7D32;--verde-lt:#E8F5E9;--verde-btn:#43A047;--laranja:#E65100;--azul:#1565C0;--roxo:#6a1b9a;--vermelho:#B71C1C;--cinza-bg:#F4F6F8;--cinza-borda:#E0E0E0;--texto:#212121;--texto-lt:#757575;--radius:12px;--shadow:0 2px 12px rgba(0,0,0,0.08);}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Nunito Sans',sans-serif;background:var(--cinza-bg);color:var(--texto);min-height:100vh;}
+.header{background:var(--verde);color:white;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.2);flex-wrap:wrap;gap:8px;}
+.header-logo{font-family:'Nunito',sans-serif;font-size:16px;font-weight:800;padding:8px 0;}
+.header-nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 0;}
+.nav-btn{padding:7px 12px;border-radius:8px;border:none;cursor:pointer;font-family:'Nunito',sans-serif;font-size:12px;font-weight:700;background:transparent;color:rgba(255,255,255,0.75);transition:all 0.2s;white-space:nowrap;}
+.nav-btn:hover{background:rgba(255,255,255,0.12);color:white;}
+.nav-btn.ativo{background:rgba(255,255,255,0.2);color:white;}
+.tela{display:none;padding:18px;max-width:1200px;margin:0 auto;}
+.tela.ativa{display:block;}
+.card{background:white;border-radius:var(--radius);padding:18px;box-shadow:var(--shadow);margin-bottom:14px;}
+.card h3{font-family:'Nunito',sans-serif;font-weight:800;font-size:15px;color:var(--verde);margin-bottom:4px;}
+.card p.desc{font-size:12px;color:var(--texto-lt);margin-bottom:14px;}
+.row-flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.btn{padding:9px 16px;background:var(--verde);color:white;border:none;border-radius:8px;font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.2s;}
+.btn:hover{background:var(--verde-md);}
+.btn:disabled{background:#bdbdbd;cursor:not-allowed;}
+.btn-sec{background:white;color:var(--azul);border:1px solid var(--azul);}
+.btn-sec:hover{background:#E3F2FD;}
+.btn-danger{background:white;color:var(--vermelho);border:1px solid var(--vermelho);}
+.btn-danger:hover{background:#FFEBEE;}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px;}
+input,select,textarea{padding:8px 10px;border:1px solid var(--cinza-borda);border-radius:8px;font-size:13px;font-family:'Nunito Sans',sans-serif;outline:none;background:white;}
+input:focus,select:focus,textarea:focus{border-color:var(--verde-btn);}
+label{font-size:11px;font-weight:700;color:var(--texto-lt);text-transform:uppercase;letter-spacing:0.3px;display:block;margin-bottom:3px;}
+.field{display:flex;flex-direction:column;gap:2px;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead tr{background:var(--verde);}
+thead th{color:white;padding:9px 10px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:0.4px;font-family:'Nunito',sans-serif;white-space:nowrap;}
+tbody tr:nth-child(even){background:#FAFAFA;}
+tbody tr:hover{background:var(--verde-lt);}
+td{padding:8px 10px;border-bottom:1px solid var(--cinza-borda);vertical-align:middle;}
+.table-wrap{overflow-x:auto;border-radius:var(--radius);}
+.vazio{text-align:center;padding:30px;color:var(--texto-lt);font-size:13px;}
+.badge{display:inline-block;padding:2px 8px;border-radius:8px;color:white;font-size:10px;font-weight:700;}
+.badge-ok{background:var(--verde-md);}
+.badge-alerta{background:var(--laranja);}
+.badge-critico{background:var(--vermelho);}
+.badge-neutro{background:#9E9E9E;}
+.dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px;}
+.dash-card{background:white;border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.dc-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--texto-lt);margin-bottom:5px;}
+.dc-valor{font-family:'Nunito',sans-serif;font-size:26px;font-weight:800;}
+.dc-sub{font-size:11px;color:var(--texto-lt);margin-top:2px;}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:500;align-items:center;justify-content:center;padding:20px;}
+.modal-overlay.aberto{display:flex;}
+.modal{background:white;border-radius:var(--radius);padding:22px;max-width:480px;width:100%;max-height:90vh;overflow-y:auto;}
+.modal h3{font-family:'Nunito',sans-serif;font-weight:800;font-size:16px;color:var(--verde);margin-bottom:14px;}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;}
+.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;}
+.drop-zone{border:2px dashed var(--cinza-borda);border-radius:10px;padding:26px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--cinza-bg);}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--verde-btn);background:var(--verde-lt);}
+.dz-icon{font-size:32px;margin-bottom:6px;}
+.drop-zone p{font-size:13px;color:var(--texto-lt);}
+#file-input{display:none;}
+.receita-item{display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:6px 8px;background:var(--cinza-bg);border-radius:8px;}
+.receita-item span{flex:1;font-size:12px;}
+.step{display:none;}
+.step.ativo{display:block;}
+.steps-nav{display:flex;gap:6px;margin-bottom:14px;}
+.step-dot{width:26px;height:26px;border-radius:50%;background:var(--cinza-borda);color:var(--texto-lt);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
+.step-dot.ativo{background:var(--verde);color:white;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(100px);background:#212121;color:white;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:9999;transition:transform 0.3s ease;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+.filtros{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;}
+.acoes-tabela{display:flex;gap:5px;}
+.help-box{background:var(--verde-lt);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--verde);margin-bottom:10px;}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="header-logo">🐾 Petland Bom Fim - Banho &amp; Tosa</div>
+  <nav class="header-nav">
+    <button class="nav-btn ativo" id="nav-dashboard" onclick="mostrarTela('dashboard')">Dashboard</button>
+    <button class="nav-btn" id="nav-produtos" onclick="mostrarTela('produtos')">Produtos</button>
+    <button class="nav-btn" id="nav-servicos" onclick="mostrarTela('servicos')">Serviços &amp; Receitas</button>
+    <button class="nav-btn" id="nav-importar" onclick="mostrarTela('importar')">Importar Atendimentos</button>
+    <button class="nav-btn" id="nav-historico" onclick="mostrarTela('historico')">Histórico</button>
+  </nav>
+</header>
+
+<!-- DASHBOARD -->
+<div class="tela ativa" id="tela-dashboard">
+  <div class="card">
+    <div class="filtros">
+      <div class="field"><label>Período de</label><input type="date" id="dash-de"></div>
+      <div class="field"><label>até</label><input type="date" id="dash-ate"></div>
+      <button class="btn" onclick="renderizarDashboard()">Filtrar</button>
+      <button class="btn-sec btn" onclick="dashMesAtual()">Este mês</button>
+      <button class="btn-sec btn" onclick="dashTudo()">Tudo</button>
+    </div>
+  </div>
+  <div class="dash-grid" id="dash-cards"></div>
+  <div class="card">
+    <h3>Consumo e estoque por produto</h3>
+    <p class="desc">Rendimento = quantos banhos uma embalagem nova do produto atende, no ritmo de consumo do período filtrado. Banhos restantes = estoque atual ÷ consumo médio por banho.</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Produto</th><th>Consumo no período</th><th>Consumo médio/banho</th><th>Rendimento (banhos/embalagem)</th><th>Estoque atual</th><th>Banhos restantes</th><th>Situação</th></tr></thead>
+      <tbody id="dash-produtos-tbody"></tbody>
+    </table></div>
+  </div>
+  <div class="card">
+    <h3>Custo por serviço</h3>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Serviço</th><th>Qtd. no período</th><th>Custo médio (produtos/banho)</th><th>Custo total no período</th></tr></thead>
+      <tbody id="dash-servicos-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- PRODUTOS -->
+<div class="tela" id="tela-produtos">
+  <div class="card">
+    <div class="row-flex" style="justify-content:space-between">
+      <div><h3>Produtos</h3><p class="desc" style="margin-bottom:0">Cadastre shampoo, condicionador, perfume etc. com o tamanho e custo da embalagem.</p></div>
+      <button class="btn" onclick="abrirModalProduto()">+ Novo produto</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nome</th><th>Unidade</th><th>Embalagem</th><th>Custo embalagem</th><th>Custo/unidade</th><th>Estoque atual</th><th>Estoque mínimo</th><th>Ações</th></tr></thead>
+      <tbody id="produtos-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- SERVIÇOS E RECEITAS -->
+<div class="tela" id="tela-servicos">
+  <div class="card">
+    <div class="row-flex" style="justify-content:space-between">
+      <div><h3>Serviços &amp; Receitas de consumo</h3><p class="desc" style="margin-bottom:0">Defina quanto de cada produto é gasto em cada tipo de banho, tosa ou adicional.</p></div>
+      <button class="btn" onclick="abrirModalServico()">+ Novo serviço</button>
+    </div>
+  </div>
+  <div id="servicos-lista"></div>
+</div>
+
+<!-- IMPORTAR -->
+<div class="tela" id="tela-importar">
+  <div class="card">
+    <h3>1. Enviar planilha</h3>
+    <p class="desc">Envie a base de banhos e adicionais realizados (.xlsx ou .csv), exportada do sistema.</p>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <div class="dz-icon">📊</div>
+      <p><strong>Arraste o arquivo</strong> aqui ou clique para escolher</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls,.csv" onchange="selecionarArquivo(this.files[0])">
+    <div id="imp-arquivo-nome" style="margin-top:8px;font-size:12px;color:var(--texto-lt)"></div>
+  </div>
+
+  <div class="card step" id="imp-step-mapear">
+    <h3>2. Identificar colunas</h3>
+    <p class="desc">Diga qual coluna da planilha é a data e qual é o serviço/adicional realizado.</p>
+    <div class="modal-grid" style="grid-template-columns:1fr 1fr 1fr">
+      <div class="field"><label>Coluna de data</label><select id="map-data"></select></div>
+      <div class="field"><label>Coluna de serviço/adicional</label><select id="map-servico"></select></div>
+      <div class="field"><label>Coluna de quantidade (opcional)</label><select id="map-qtd"><option value="">Não tem (assume 1 por linha)</option></select></div>
+    </div>
+    <button class="btn" onclick="analisarPlanilha()">Analisar planilha</button>
+  </div>
+
+  <div class="card step" id="imp-step-reconciliar">
+    <h3>3. Vincular serviços da planilha aos serviços cadastrados</h3>
+    <p class="desc">Cada valor diferente encontrado na coluna de serviço precisa apontar para um serviço já cadastrado (com receita de consumo definida) ou virar um novo cadastro.</p>
+    <div id="imp-reconciliar-lista"></div>
+    <div class="row-flex" style="margin-top:12px">
+      <button class="btn" onclick="confirmarImportacao(this)">Confirmar e importar</button>
+      <span id="imp-resumo" style="font-size:12px;color:var(--texto-lt)"></span>
+    </div>
+  </div>
+
+  <div class="card step" id="imp-step-ok">
+    <h3 style="color:var(--verde-md)">Importação concluída</h3>
+    <p id="imp-ok-msg" class="desc"></p>
+    <button class="btn-sec btn" onclick="resetarImportacao()">Importar outra planilha</button>
+  </div>
+</div>
+
+<!-- HISTORICO -->
+<div class="tela" id="tela-historico">
+  <div class="card">
+    <div class="filtros">
+      <div class="field"><label>Tipo</label><select id="hist-tipo"><option value="">Todos</option><option value="atendimento">Atendimento (consumo)</option><option value="entrada">Entrada de estoque</option></select></div>
+      <div class="field"><label>De</label><input type="date" id="hist-de"></div>
+      <div class="field"><label>Até</label><input type="date" id="hist-ate"></div>
+      <button class="btn" onclick="renderizarHistorico()">Filtrar</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Quantidade</th><th>Origem</th><th>Ações</th></tr></thead>
+      <tbody id="hist-tbody"></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- MODAL PRODUTO -->
+<div class="modal-overlay" id="modal-produto">
+  <div class="modal">
+    <h3 id="modal-produto-titulo">Novo produto</h3>
+    <input type="hidden" id="produto-id">
+    <div class="modal-grid">
+      <div class="field" style="grid-column:1/3"><label>Nome do produto</label><input type="text" id="produto-nome" placeholder="Ex: Shampoo neutro"></div>
+      <div class="field"><label>Unidade</label><select id="produto-unidade"><option value="ml">ml</option><option value="g">g</option><option value="un">unidade</option><option value="L">L</option><option value="kg">kg</option></select></div>
+      <div class="field"><label>Tamanho da embalagem</label><input type="number" id="produto-tamanho" min="0" step="0.01" placeholder="Ex: 1000"></div>
+      <div class="field"><label>Custo da embalagem (R$)</label><input type="number" id="produto-custo" min="0" step="0.01" placeholder="Ex: 45.00"></div>
+      <div class="field"><label>Estoque mínimo (unidades da embalagem)</label><input type="number" id="produto-min" min="0" step="0.01" placeholder="Ex: 2"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sec btn" onclick="fecharModal('modal-produto')">Cancelar</button>
+      <button class="btn" onclick="salvarProduto()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL ENTRADA DE ESTOQUE -->
+<div class="modal-overlay" id="modal-entrada">
+  <div class="modal">
+    <h3>Registrar entrada de estoque</h3>
+    <input type="hidden" id="entrada-produto-id">
+    <p class="desc" id="entrada-produto-nome"></p>
+    <div class="modal-grid">
+      <div class="field"><label>Quantidade (embalagens)</label><input type="number" id="entrada-qtd" min="0" step="0.01" value="1"></div>
+      <div class="field"><label>Data</label><input type="date" id="entrada-data"></div>
+      <div class="field" style="grid-column:1/3"><label>Custo total da compra (R$, opcional)</label><input type="number" id="entrada-custo" min="0" step="0.01" placeholder="Deixe em branco para usar o custo já cadastrado"></div>
+      <div class="field" style="grid-column:1/3"><label>Observação</label><input type="text" id="entrada-obs" placeholder="Opcional"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sec btn" onclick="fecharModal('modal-entrada')">Cancelar</button>
+      <button class="btn" onclick="salvarEntrada()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SERVIÇO -->
+<div class="modal-overlay" id="modal-servico">
+  <div class="modal" style="max-width:560px">
+    <h3 id="modal-servico-titulo">Novo serviço</h3>
+    <input type="hidden" id="servico-id">
+    <div class="field" style="margin-bottom:12px"><label>Nome do serviço</label><input type="text" id="servico-nome" placeholder="Ex: Banho cão porte médio" style="width:100%"></div>
+    <label>Produtos consumidos neste serviço</label>
+    <div id="servico-receita-lista" style="margin:8px 0"></div>
+    <div class="row-flex">
+      <select id="servico-add-produto" style="flex:1"></select>
+      <input type="number" id="servico-add-qtd" min="0" step="0.01" placeholder="Quantidade" style="width:110px">
+      <button class="btn-sec btn btn-sm" onclick="adicionarItemReceita()">+ Adicionar</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-sec btn" onclick="fecharModal('modal-servico')">Cancelar</button>
+      <button class="btn" onclick="salvarServico()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getFirestore,collection,getDocs,doc,setDoc,deleteDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const fbCfg={apiKey:"AIzaSyDwAwIChZIJcakyaATVH_OUTDPfzfqEONg",authDomain:"petland-bomfim.firebaseapp.com",projectId:"petland-bomfim",storageBucket:"petland-bomfim.firebasestorage.app",messagingSenderId:"170051818653",appId:"1:170051818653:web:30b161de6f77ff1ff83074"};
+const app=initializeApp(fbCfg);
+const db=getFirestore(app);
+
+const COL={produtos:'bt_produtos',servicos:'bt_servicos',entradas:'bt_entradas',atendimentos:'bt_atendimentos'};
+
+let produtos=[],servicos=[],entradas=[],atendimentos=[];
+let receitaEmEdicao=[];
+let importState=null;
+
+function uid(){return (crypto.randomUUID?crypto.randomUUID():'id-'+Date.now()+'-'+Math.random().toString(16).slice(2)).replace(/-/g,'');}
+function escapeHtml(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.classList.remove('show'),2600);}
+function fmtMoeda(v){return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
+function fmtNum(v,casas=1){return (v||0).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:casas});}
+function hojeStr(){return new Date().toISOString().slice(0,10);}
+
+async function fetchAll(nome){const snap=await getDocs(collection(db,nome));return snap.docs.map(d=>({id:d.id,...d.data()}));}
+
+async function carregarTudo(){
+  try{
+    [produtos,servicos,entradas,atendimentos]=await Promise.all([
+      fetchAll(COL.produtos),fetchAll(COL.servicos),fetchAll(COL.entradas),fetchAll(COL.atendimentos)
+    ]);
+  }catch(e){console.error(e);toast('Erro ao carregar dados: '+e.message);}
+}
+
+function produtoMap(){const m={};produtos.forEach(p=>m[p.id]=p);return m;}
+function servicoMap(){const m={};servicos.forEach(s=>m[s.id]=s);return m;}
+
+function custoUnitario(p){
+  const tam=parseFloat(p.tamanhoEmbalagem)||0;const custo=parseFloat(p.custoEmbalagem)||0;
+  return tam>0?custo/tam:0;
+}
+function custoServico(s,pMap){
+  return (s.receita||[]).reduce((acc,item)=>acc+(parseFloat(item.quantidade)||0)*custoUnitario(pMap[item.produtoId]||{}),0);
+}
+
+// ---------- estoque ----------
+function estoqueAtual(produtoId){
+  const entradasProduto=entradas.filter(e=>e.produtoId===produtoId).reduce((s,e)=>s+(parseFloat(e.quantidade)||0),0);
+  const sMap=servicoMap();
+  let consumido=0;
+  atendimentos.forEach(a=>{
+    const s=sMap[a.servicoId];if(!s)return;
+    (s.receita||[]).forEach(item=>{
+      if(item.produtoId===produtoId)consumido+=(parseFloat(item.quantidade)||0)*(parseFloat(a.quantidade)||1);
+    });
+  });
+  // consumido está em unidades do produto (ex: ml); entradas estão em embalagens -> converter para unidades
+  const p=produtoMap()[produtoId];
+  const tam=p?(parseFloat(p.tamanhoEmbalagem)||0):0;
+  const entradasEmUnidades=tam>0?entradasProduto*tam:entradasProduto;
+  return entradasEmUnidades-consumido; // em unidades (ml/g/un)
+}
+
+// ---------- NAV ----------
+window.mostrarTela=function(tela){
+  document.querySelectorAll('.tela').forEach(t=>t.classList.remove('ativa'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('ativo'));
+  document.getElementById('tela-'+tela).classList.add('ativa');
+  document.getElementById('nav-'+tela).classList.add('ativo');
+  if(tela==='dashboard')renderizarDashboard();
+  if(tela==='produtos')renderizarProdutos();
+  if(tela==='servicos')renderizarServicos();
+  if(tela==='historico')renderizarHistorico();
+};
+
+window.fecharModal=function(id){document.getElementById(id).classList.remove('aberto');};
+function abrirModal(id){document.getElementById(id).classList.add('aberto');}
+
+// ---------- PRODUTOS ----------
+window.abrirModalProduto=function(produtoId){
+  document.getElementById('modal-produto-titulo').textContent=produtoId?'Editar produto':'Novo produto';
+  document.getElementById('produto-id').value=produtoId||'';
+  const p=produtoId?produtoMap()[produtoId]:null;
+  document.getElementById('produto-nome').value=p?p.nome:'';
+  document.getElementById('produto-unidade').value=p?p.unidade:'ml';
+  document.getElementById('produto-tamanho').value=p?p.tamanhoEmbalagem:'';
+  document.getElementById('produto-custo').value=p?p.custoEmbalagem:'';
+  document.getElementById('produto-min').value=p?p.estoqueMinimo:'';
+  abrirModal('modal-produto');
+};
+window.salvarProduto=async function(){
+  const nome=document.getElementById('produto-nome').value.trim();
+  if(!nome){toast('Informe o nome do produto');return;}
+  const id=document.getElementById('produto-id').value||uid();
+  const dados={
+    nome,unidade:document.getElementById('produto-unidade').value,
+    tamanhoEmbalagem:parseFloat(document.getElementById('produto-tamanho').value)||0,
+    custoEmbalagem:parseFloat(document.getElementById('produto-custo').value)||0,
+    estoqueMinimo:parseFloat(document.getElementById('produto-min').value)||0,
+  };
+  try{await setDoc(doc(db,COL.produtos,id),dados);toast('Produto salvo!');fecharModal('modal-produto');await carregarTudo();renderizarProdutos();}
+  catch(e){toast('Erro: '+e.message);}
+};
+window.excluirProduto=async function(id){
+  if(!confirm('Excluir este produto? O histórico de entradas e receitas que o usam não será apagado automaticamente.'))return;
+  try{await deleteDoc(doc(db,COL.produtos,id));toast('Produto excluído');await carregarTudo();renderizarProdutos();}
+  catch(e){toast('Erro: '+e.message);}
+};
+
+function renderizarProdutos(){
+  const tbody=document.getElementById('produtos-tbody');
+  if(!produtos.length){tbody.innerHTML='<tr><td colspan="8" class="vazio">Nenhum produto cadastrado</td></tr>';return;}
+  tbody.innerHTML=produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(p=>{
+    const cu=custoUnitario(p);
+    const est=estoqueAtual(p.id);
+    const estEmb=p.tamanhoEmbalagem>0?est/p.tamanhoEmbalagem:est;
+    const abaixoMin=p.estoqueMinimo&&estEmb<parseFloat(p.estoqueMinimo);
+    return `<tr>
+      <td><strong>${escapeHtml(p.nome)}</strong></td>
+      <td>${escapeHtml(p.unidade)}</td>
+      <td>${fmtNum(p.tamanhoEmbalagem,2)} ${escapeHtml(p.unidade)}</td>
+      <td>${fmtMoeda(p.custoEmbalagem)}</td>
+      <td>${fmtMoeda(cu)}/${escapeHtml(p.unidade)}</td>
+      <td>${fmtNum(est,1)} ${escapeHtml(p.unidade)} <span style="color:var(--texto-lt)">(${fmtNum(estEmb,2)} emb.)</span> ${abaixoMin?'<span class="badge badge-critico">baixo</span>':''}</td>
+      <td>${p.estoqueMinimo?fmtNum(p.estoqueMinimo,2)+' emb.':'-'}</td>
+      <td class="acoes-tabela">
+        <button class="btn-sec btn btn-sm" onclick="abrirModalEntrada('${p.id}')">+ Entrada</button>
+        <button class="btn-sec btn btn-sm" onclick="abrirModalProduto('${p.id}')">Editar</button>
+        <button class="btn-danger btn btn-sm" onclick="excluirProduto('${p.id}')">Excluir</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// ---------- ENTRADAS DE ESTOQUE ----------
+window.abrirModalEntrada=function(produtoId){
+  const p=produtoMap()[produtoId];if(!p)return;
+  document.getElementById('entrada-produto-id').value=produtoId;
+  document.getElementById('entrada-produto-nome').textContent=`${p.nome} — embalagem de ${fmtNum(p.tamanhoEmbalagem,2)} ${p.unidade}`;
+  document.getElementById('entrada-qtd').value=1;
+  document.getElementById('entrada-data').value=hojeStr();
+  document.getElementById('entrada-custo').value='';
+  document.getElementById('entrada-obs').value='';
+  abrirModal('modal-entrada');
+};
+window.salvarEntrada=async function(){
+  const produtoId=document.getElementById('entrada-produto-id').value;
+  const qtd=parseFloat(document.getElementById('entrada-qtd').value);
+  if(!produtoId||!qtd){toast('Informe a quantidade');return;}
+  const p=produtoMap()[produtoId];
+  const custoInformado=parseFloat(document.getElementById('entrada-custo').value);
+  const custoTotal=!isNaN(custoInformado)?custoInformado:qtd*(parseFloat(p.custoEmbalagem)||0);
+  const dados={produtoId,quantidade:qtd,custoTotal,data:document.getElementById('entrada-data').value||hojeStr(),
+    obs:document.getElementById('entrada-obs').value.trim(),ts:Date.now()};
+  try{await setDoc(doc(db,COL.entradas,uid()),dados);toast('Entrada registrada!');fecharModal('modal-entrada');await carregarTudo();renderizarProdutos();}
+  catch(e){toast('Erro: '+e.message);}
+};
+
+// ---------- SERVIÇOS E RECEITAS ----------
+window.abrirModalServico=function(servicoId){
+  document.getElementById('modal-servico-titulo').textContent=servicoId?'Editar serviço':'Novo serviço';
+  document.getElementById('servico-id').value=servicoId||'';
+  const s=servicoId?servicoMap()[servicoId]:null;
+  document.getElementById('servico-nome').value=s?s.nome:'';
+  receitaEmEdicao=s?JSON.parse(JSON.stringify(s.receita||[])):[];
+  const sel=document.getElementById('servico-add-produto');
+  sel.innerHTML=produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(p=>`<option value="${p.id}">${escapeHtml(p.nome)} (${escapeHtml(p.unidade)})</option>`).join('')||'<option value="">Cadastre um produto primeiro</option>';
+  document.getElementById('servico-add-qtd').value='';
+  renderizarReceitaEmEdicao();
+  abrirModal('modal-servico');
+};
+function renderizarReceitaEmEdicao(){
+  const pMap=produtoMap();
+  const el=document.getElementById('servico-receita-lista');
+  if(!receitaEmEdicao.length){el.innerHTML='<p style="font-size:12px;color:var(--texto-lt)">Nenhum produto adicionado ainda.</p>';return;}
+  el.innerHTML=receitaEmEdicao.map((item,idx)=>{
+    const p=pMap[item.produtoId];
+    return `<div class="receita-item"><span>${p?escapeHtml(p.nome):'(produto removido)'} — ${fmtNum(item.quantidade,2)} ${p?escapeHtml(p.unidade):''}</span>
+      <button class="btn-danger btn btn-sm" onclick="removerItemReceita(${idx})">Remover</button></div>`;
+  }).join('');
+}
+window.adicionarItemReceita=function(){
+  const produtoId=document.getElementById('servico-add-produto').value;
+  const quantidade=parseFloat(document.getElementById('servico-add-qtd').value);
+  if(!produtoId||!quantidade){toast('Escolha o produto e a quantidade');return;}
+  const existente=receitaEmEdicao.find(i=>i.produtoId===produtoId);
+  if(existente)existente.quantidade=quantidade;else receitaEmEdicao.push({produtoId,quantidade});
+  document.getElementById('servico-add-qtd').value='';
+  renderizarReceitaEmEdicao();
+};
+window.removerItemReceita=function(idx){receitaEmEdicao.splice(idx,1);renderizarReceitaEmEdicao();};
+window.salvarServico=async function(){
+  const nome=document.getElementById('servico-nome').value.trim();
+  if(!nome){toast('Informe o nome do serviço');return;}
+  const id=document.getElementById('servico-id').value||uid();
+  try{await setDoc(doc(db,COL.servicos,id),{nome,receita:receitaEmEdicao});toast('Serviço salvo!');fecharModal('modal-servico');await carregarTudo();renderizarServicos();}
+  catch(e){toast('Erro: '+e.message);}
+};
+window.excluirServico=async function(id){
+  if(!confirm('Excluir este serviço? Atendimentos já importados com este serviço deixarão de contar consumo.'))return;
+  try{await deleteDoc(doc(db,COL.servicos,id));toast('Serviço excluído');await carregarTudo();renderizarServicos();}
+  catch(e){toast('Erro: '+e.message);}
+};
+function renderizarServicos(){
+  const el=document.getElementById('servicos-lista');
+  const pMap=produtoMap();
+  if(!servicos.length){el.innerHTML='<div class="card"><p class="vazio">Nenhum serviço cadastrado ainda.</p></div>';return;}
+  el.innerHTML=servicos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(s=>{
+    const custo=custoServico(s,pMap);
+    const itens=(s.receita||[]).map(i=>{const p=pMap[i.produtoId];return `<li>${p?escapeHtml(p.nome):'(produto removido)'} — ${fmtNum(i.quantidade,2)} ${p?escapeHtml(p.unidade):''}</li>`;}).join('')||'<li style="color:var(--texto-lt)">Sem receita definida</li>';
+    return `<div class="card">
+      <div class="row-flex" style="justify-content:space-between">
+        <div><h3 style="margin-bottom:6px">${escapeHtml(s.nome)}</h3>
+          <ul style="margin:0 0 8px 16px;font-size:12px">${itens}</ul>
+          <p class="desc" style="margin-bottom:0">Custo médio em produtos por atendimento: <strong>${fmtMoeda(custo)}</strong></p>
+        </div>
+        <div class="acoes-tabela">
+          <button class="btn-sec btn btn-sm" onclick="abrirModalServico('${s.id}')">Editar</button>
+          <button class="btn-danger btn btn-sm" onclick="excluirServico('${s.id}')">Excluir</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---------- DASHBOARD ----------
+window.dashMesAtual=function(){
+  const h=new Date();
+  document.getElementById('dash-de').value=`${h.getFullYear()}-${String(h.getMonth()+1).padStart(2,'0')}-01`;
+  document.getElementById('dash-ate').value=hojeStr();
+  renderizarDashboard();
+};
+window.dashTudo=function(){document.getElementById('dash-de').value='';document.getElementById('dash-ate').value='';renderizarDashboard();};
+
+window.renderizarDashboard=function(){
+  const de=document.getElementById('dash-de').value;const ate=document.getElementById('dash-ate').value;
+  const tsD=de?new Date(de+'T00:00:00').getTime():-Infinity;
+  const tsA=ate?new Date(ate+'T23:59:59').getTime():Infinity;
+  const noPeriodo=atendimentos.filter(a=>{const t=new Date((a.data||'1970-01-01')+'T12:00:00').getTime();return t>=tsD&&t<=tsA;});
+  const pMap=produtoMap();const sMap=servicoMap();
+  const totalBanhos=noPeriodo.reduce((s,a)=>s+(parseFloat(a.quantidade)||1),0);
+
+  let custoTotalPeriodo=0;
+  const consumoPorProduto={};
+  const porServico={};
+  noPeriodo.forEach(a=>{
+    const s=sMap[a.servicoId];const qtdAt=parseFloat(a.quantidade)||1;
+    if(!porServico[a.servicoId])porServico[a.servicoId]={qtd:0,custo:0};
+    porServico[a.servicoId].qtd+=qtdAt;
+    if(!s)return;
+    const custoUnit=custoServico(s,pMap);
+    custoTotalPeriodo+=custoUnit*qtdAt;
+    porServico[a.servicoId].custo+=custoUnit*qtdAt;
+    (s.receita||[]).forEach(item=>{
+      consumoPorProduto[item.produtoId]=(consumoPorProduto[item.produtoId]||0)+(parseFloat(item.quantidade)||0)*qtdAt;
+    });
+  });
+  const custoMedioBanho=totalBanhos>0?custoTotalPeriodo/totalBanhos:0;
+
+  document.getElementById('dash-cards').innerHTML=`
+    <div class="dash-card"><div class="dc-label">Atendimentos no período</div><div class="dc-valor" style="color:var(--verde)">${fmtNum(totalBanhos,0)}</div><div class="dc-sub">banhos/adicionais</div></div>
+    <div class="dash-card"><div class="dc-label">Custo médio por banho</div><div class="dc-valor" style="color:var(--azul)">${fmtMoeda(custoMedioBanho)}</div><div class="dc-sub">em produtos consumidos</div></div>
+    <div class="dash-card"><div class="dc-label">Custo total no período</div><div class="dc-valor" style="color:var(--laranja)">${fmtMoeda(custoTotalPeriodo)}</div><div class="dc-sub">produtos consumidos</div></div>
+    <div class="dash-card"><div class="dc-label">Produtos cadastrados</div><div class="dc-valor" style="color:var(--roxo)">${produtos.length}</div><div class="dc-sub">${servicos.length} serviços</div></div>`;
+
+  const tbody=document.getElementById('dash-produtos-tbody');
+  if(!produtos.length){tbody.innerHTML='<tr><td colspan="7" class="vazio">Cadastre produtos para ver esta análise</td></tr>';}
+  else{
+    tbody.innerHTML=produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(p=>{
+      const consumoPeriodo=consumoPorProduto[p.id]||0;
+      const consumoMedio=totalBanhos>0?consumoPeriodo/totalBanhos:0;
+      const rendimento=consumoMedio>0?(parseFloat(p.tamanhoEmbalagem)||0)/consumoMedio:null;
+      const est=estoqueAtual(p.id);
+      const banhosRestantes=consumoMedio>0?est/consumoMedio:null;
+      let situacao='<span class="badge badge-neutro">sem dados</span>';
+      if(banhosRestantes!==null){
+        if(banhosRestantes<7)situacao='<span class="badge badge-critico">repor urgente</span>';
+        else if(banhosRestantes<20)situacao='<span class="badge badge-alerta">atenção</span>';
+        else situacao='<span class="badge badge-ok">ok</span>';
+      }
+      return `<tr>
+        <td><strong>${escapeHtml(p.nome)}</strong></td>
+        <td>${fmtNum(consumoPeriodo,1)} ${escapeHtml(p.unidade)}</td>
+        <td>${fmtNum(consumoMedio,3)} ${escapeHtml(p.unidade)}</td>
+        <td>${rendimento!==null?fmtNum(rendimento,0)+' banhos':'-'}</td>
+        <td>${fmtNum(est,1)} ${escapeHtml(p.unidade)}</td>
+        <td>${banhosRestantes!==null?fmtNum(banhosRestantes,0):'-'}</td>
+        <td>${situacao}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  const stbody=document.getElementById('dash-servicos-tbody');
+  if(!servicos.length){stbody.innerHTML='<tr><td colspan="4" class="vazio">Cadastre serviços para ver esta análise</td></tr>';}
+  else{
+    stbody.innerHTML=servicos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(s=>{
+      const d=porServico[s.id]||{qtd:0,custo:0};
+      return `<tr><td><strong>${escapeHtml(s.nome)}</strong></td><td>${fmtNum(d.qtd,0)}</td><td>${fmtMoeda(custoServico(s,pMap))}</td><td>${fmtMoeda(d.custo)}</td></tr>`;
+    }).join('');
+  }
+};
+
+// ---------- IMPORTAR ----------
+async function carregarSheetJS(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+
+function configurarDropZone(){
+  const dz=document.getElementById('drop-zone');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])selecionarArquivo(e.dataTransfer.files[0]);});
+}
+
+window.selecionarArquivo=async function(file){
+  if(!file)return;
+  document.getElementById('imp-arquivo-nome').textContent='Lendo '+file.name+'...';
+  try{
+    await carregarSheetJS();
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false,dateNF:'yyyy-mm-dd'});
+    if(!rows.length){toast('Planilha vazia');return;}
+    importState={rows,headers:Object.keys(rows[0])};
+    document.getElementById('imp-arquivo-nome').textContent=`${file.name} — ${rows.length} linhas, ${importState.headers.length} colunas`;
+    montarSelectsMapeamento();
+    document.getElementById('imp-step-mapear').classList.add('ativa');
+    document.getElementById('imp-step-reconciliar').classList.remove('ativa');
+    document.getElementById('imp-step-ok').classList.remove('ativa');
+  }catch(e){console.error(e);toast('Erro ao ler arquivo: '+e.message);}
+};
+
+function montarSelectsMapeamento(){
+  const headers=importState.headers;
+  const opts=headers.map(h=>`<option value="${h}">${h}</option>`).join('');
+  document.getElementById('map-data').innerHTML=opts;
+  document.getElementById('map-servico').innerHTML=opts;
+  document.getElementById('map-qtd').innerHTML='<option value="">Não tem (assume 1 por linha)</option>'+opts;
+  const achar=(regex)=>headers.find(h=>regex.test(h.toLowerCase()));
+  const colData=achar(/data/);const colServ=achar(/servi|adicional|produto|tipo/);const colQtd=achar(/qtd|quantidade/);
+  if(colData)document.getElementById('map-data').value=colData;
+  if(colServ)document.getElementById('map-servico').value=colServ;
+  if(colQtd)document.getElementById('map-qtd').value=colQtd;
+}
+
+function excelSerialParaData(v){
+  if(v instanceof Date)return v.toISOString().slice(0,10);
+  const s=String(v).trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+  const br=s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+  if(br){let[,d,m,a]=br;if(a.length===2)a='20'+a;return `${a}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;}
+  const n=parseFloat(s);
+  if(!isNaN(n)&&n>20000&&n<80000){const d=XLSX.SSF.parse_date_code(n);return `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`;}
+  return s||hojeStr();
+}
+
+window.analisarPlanilha=function(){
+  const colData=document.getElementById('map-data').value;
+  const colServ=document.getElementById('map-servico').value;
+  const colQtd=document.getElementById('map-qtd').value;
+  if(!colData||!colServ){toast('Escolha as colunas de data e serviço');return;}
+  const linhas=importState.rows.map(r=>({
+    data:excelSerialParaData(r[colData]),
+    servicoTexto:String(r[colServ]||'').trim(),
+    quantidade:colQtd&&r[colQtd]!==''?(parseFloat(r[colQtd])||1):1,
+  })).filter(l=>l.servicoTexto);
+  if(!linhas.length){toast('Nenhuma linha válida encontrada');return;}
+  importState.linhas=linhas;
+  const valoresUnicos=[...new Set(linhas.map(l=>l.servicoTexto))];
+  importState.valoresUnicos=valoresUnicos;
+  importState.mapeamentoServicos={};
+  const sList=servicos.slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+  const el=document.getElementById('imp-reconciliar-lista');
+  el.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Valor na planilha</th><th>Ocorrências</th><th>Vincular a</th></tr></thead><tbody>${
+    valoresUnicos.map((v,idx)=>{
+      const count=linhas.filter(l=>l.servicoTexto===v).length;
+      const match=sList.find(s=>s.nome.toLowerCase()===v.toLowerCase());
+      importState.mapeamentoServicos[v]=match?match.id:'__novo__';
+      const options=sList.map(s=>`<option value="${s.id}" ${match&&match.id===s.id?'selected':''}>${escapeHtml(s.nome)}</option>`).join('');
+      return `<tr><td><strong>${escapeHtml(v)}</strong></td><td>${count}</td>
+        <td><select data-idx="${idx}" onchange="importState_setMapeamento(this.dataset.idx,this.value)">
+          <option value="__novo__" ${!match?'selected':''}>+ Criar novo serviço "${escapeHtml(v)}"</option>
+          ${options}
+        </select></td></tr>`;
+    }).join('')
+  }</tbody></table></div>`;
+  document.getElementById('imp-resumo').textContent=`${linhas.length} linhas, ${valoresUnicos.length} tipos de serviço encontrados.`;
+  document.getElementById('imp-step-reconciliar').classList.add('ativa');
+};
+window.importState_setMapeamento=function(idx,servicoId){importState.mapeamentoServicos[importState.valoresUnicos[idx]]=servicoId;};
+
+window.confirmarImportacao=async function(btn){
+  if(!importState||!importState.linhas)return;
+  btn.disabled=true;btn.textContent='Importando...';
+  try{
+    const criarServico=async(nome)=>{
+      const id=uid();
+      await setDoc(doc(db,COL.servicos,id),{nome,receita:[]});
+      return id;
+    };
+    const cacheNovos={};
+    const importId=uid();
+    let criados=0;
+    for(const[valor,alvo]of Object.entries(importState.mapeamentoServicos)){
+      if(alvo==='__novo__'&&!cacheNovos[valor]){cacheNovos[valor]=await criarServico(valor);criados++;}
+    }
+    let ok=0;
+    for(const l of importState.linhas){
+      const alvo=importState.mapeamentoServicos[l.servicoTexto];
+      const servicoId=alvo==='__novo__'?cacheNovos[l.servicoTexto]:alvo;
+      if(!servicoId)continue;
+      await setDoc(doc(db,COL.atendimentos,uid()),{servicoId,quantidade:l.quantidade,data:l.data,origem:'importacao',importId,ts:Date.now()});
+      ok++;
+    }
+    await carregarTudo();
+    document.getElementById('imp-ok-msg').textContent=`${ok} atendimentos importados. ${criados>0?criados+' novo(s) serviço(s) criado(s) — não esqueça de definir a receita de consumo deles em "Serviços & Receitas".':''}`;
+    document.getElementById('imp-step-mapear').classList.remove('ativa');
+    document.getElementById('imp-step-reconciliar').classList.remove('ativa');
+    document.getElementById('imp-step-ok').classList.add('ativa');
+    toast('Importação concluída!');
+  }catch(e){console.error(e);toast('Erro na importação: '+e.message);}
+  btn.disabled=false;btn.textContent='Confirmar e importar';
+};
+window.resetarImportacao=function(){
+  importState=null;
+  document.getElementById('imp-arquivo-nome').textContent='';
+  document.getElementById('file-input').value='';
+  document.getElementById('imp-step-mapear').classList.remove('ativa');
+  document.getElementById('imp-step-reconciliar').classList.remove('ativa');
+  document.getElementById('imp-step-ok').classList.remove('ativa');
+};
+
+// ---------- HISTORICO ----------
+window.excluirAtendimento=async function(id){
+  if(!confirm('Excluir este atendimento do histórico? Isso recalcula o consumo e o estoque.'))return;
+  try{await deleteDoc(doc(db,COL.atendimentos,id));toast('Atendimento excluído');await carregarTudo();renderizarHistorico();}
+  catch(e){toast('Erro: '+e.message);}
+};
+window.excluirEntrada=async function(id){
+  if(!confirm('Excluir esta entrada de estoque?'))return;
+  try{await deleteDoc(doc(db,COL.entradas,id));toast('Entrada excluída');await carregarTudo();renderizarHistorico();}
+  catch(e){toast('Erro: '+e.message);}
+};
+
+window.renderizarHistorico=function(){
+  const tipo=document.getElementById('hist-tipo').value;
+  const de=document.getElementById('hist-de').value;const ate=document.getElementById('hist-ate').value;
+  const tsD=de?new Date(de+'T00:00:00').getTime():-Infinity;
+  const tsA=ate?new Date(ate+'T23:59:59').getTime():Infinity;
+  const sMap=servicoMap();const pMap=produtoMap();
+  let linhas=[];
+  if(tipo!=='entrada'){
+    atendimentos.forEach(a=>{
+      const t=new Date((a.data||'1970-01-01')+'T12:00:00').getTime();
+      if(t<tsD||t>tsA)return;
+      const s=sMap[a.servicoId];
+      linhas.push({data:a.data,tipo:'Atendimento',desc:s?escapeHtml(s.nome):'(serviço removido)',qtd:a.quantidade||1,origem:a.origem==='importacao'?'Importação':'Manual',acao:`<button class="btn-danger btn btn-sm" onclick="excluirAtendimento('${a.id}')">Excluir</button>`});
+    });
+  }
+  if(tipo!=='atendimento'){
+    entradas.forEach(e=>{
+      const t=new Date((e.data||'1970-01-01')+'T12:00:00').getTime();
+      if(t<tsD||t>tsA)return;
+      const p=pMap[e.produtoId];
+      linhas.push({data:e.data,tipo:'Entrada',desc:`${p?escapeHtml(p.nome):'(produto removido)'} — ${fmtMoeda(e.custoTotal)}`,qtd:e.quantidade,origem:'Manual',acao:`<button class="btn-danger btn btn-sm" onclick="excluirEntrada('${e.id}')">Excluir</button>`});
+    });
+  }
+  linhas.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
+  const tbody=document.getElementById('hist-tbody');
+  tbody.innerHTML=linhas.length?linhas.map(l=>`<tr><td>${(l.data||'').split('-').reverse().join('/')}</td><td><span class="badge ${l.tipo==='Entrada'?'badge-ok':'badge-neutro'}">${l.tipo}</span></td><td>${l.desc}</td><td>${fmtNum(l.qtd,2)}</td><td>${l.origem}</td><td>${l.acao}</td></tr>`).join('')
+    :'<tr><td colspan="6" class="vazio">Nenhum registro encontrado</td></tr>';
+};
+
+// ---------- INIT ----------
+window.addEventListener('DOMContentLoaded',async()=>{
+  configurarDropZone();
+  document.getElementById('hist-de').value='';
+  document.getElementById('hist-ate').value='';
+  await carregarTudo();
+  dashMesAtual();
+  renderizarProdutos();
+  renderizarServicos();
+});
+</script>
+</body>
+</html>
