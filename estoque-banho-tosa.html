@@ -84,6 +84,7 @@ td{padding:8px 10px;border-bottom:1px solid var(--cinza-borda);vertical-align:mi
     <button class="nav-btn" id="nav-produtos" onclick="mostrarTela('produtos')">Produtos</button>
     <button class="nav-btn" id="nav-servicos" onclick="mostrarTela('servicos')">Serviços &amp; Receitas</button>
     <button class="nav-btn" id="nav-importar" onclick="mostrarTela('importar')">Importar Atendimentos</button>
+    <button class="nav-btn" id="nav-importar-compras" onclick="mostrarTela('importar-compras')">Importar Compras (NF)</button>
     <button class="nav-btn" id="nav-historico" onclick="mostrarTela('historico')">Histórico</button>
   </nav>
 </header>
@@ -185,6 +186,53 @@ td{padding:8px 10px;border-bottom:1px solid var(--cinza-borda);vertical-align:mi
     <h3 style="color:var(--verde-md)">Importação concluída</h3>
     <p id="imp-ok-msg" class="desc"></p>
     <button class="btn-sec btn" onclick="resetarImportacao()">Importar outra planilha</button>
+  </div>
+</div>
+
+<!-- IMPORTAR COMPRAS (NF) -->
+<div class="tela" id="tela-importar-compras">
+  <div class="card">
+    <h3>1. Enviar planilha da compra</h3>
+    <p class="desc">Envie a lista de produtos comprados (nota fiscal exportada como planilha, ou uma lista que você mesmo monte com produto, quantidade e valor).</p>
+    <div class="drop-zone" id="drop-zone-compra" onclick="document.getElementById('file-input-compra').click()">
+      <div class="dz-icon">🧾</div>
+      <p><strong>Arraste o arquivo</strong> aqui ou clique para escolher</p>
+    </div>
+    <input type="file" id="file-input-compra" accept=".xlsx,.xls,.csv" onchange="selecionarArquivoCompra(this.files[0])">
+    <div id="impc-arquivo-nome" style="margin-top:8px;font-size:12px;color:var(--texto-lt)"></div>
+  </div>
+
+  <div class="card step" id="impc-step-mapear">
+    <h3>2. Identificar colunas</h3>
+    <p class="desc">Diga qual coluna é o produto, a quantidade comprada e o valor pago.</p>
+    <div class="modal-grid" style="grid-template-columns:1fr 1fr">
+      <div class="field"><label>Coluna de produto</label><select id="mapc-produto"></select></div>
+      <div class="field"><label>Coluna de quantidade comprada</label><select id="mapc-qtd"></select></div>
+      <div class="field"><label>Coluna de valor</label><select id="mapc-valor"></select></div>
+      <div class="field"><label>Esse valor é</label><select id="mapc-valor-tipo">
+        <option value="total">Total da linha (quantidade × preço)</option>
+        <option value="unitario">Preço por unidade comprada</option>
+      </select></div>
+      <div class="field"><label>Coluna de data (opcional)</label><select id="mapc-data"><option value="">Não tem (usar data padrão abaixo)</option></select></div>
+      <div class="field"><label>Data padrão da compra</label><input type="date" id="mapc-data-padrao"></div>
+    </div>
+    <button class="btn" onclick="analisarCompra()">Analisar planilha</button>
+  </div>
+
+  <div class="card step" id="impc-step-reconciliar">
+    <h3>3. Vincular produtos da planilha aos produtos cadastrados</h3>
+    <p class="desc">Cada valor diferente encontrado na coluna de produto precisa apontar para um produto já cadastrado ou virar um novo cadastro (que você completa depois, em "Produtos").</p>
+    <div id="impc-reconciliar-lista"></div>
+    <div class="row-flex" style="margin-top:12px">
+      <button class="btn" onclick="confirmarImportacaoCompra(this)">Confirmar e importar</button>
+      <span id="impc-resumo" style="font-size:12px;color:var(--texto-lt)"></span>
+    </div>
+  </div>
+
+  <div class="card step" id="impc-step-ok">
+    <h3 style="color:var(--verde-md)">Importação concluída</h3>
+    <p id="impc-ok-msg" class="desc"></p>
+    <button class="btn-sec btn" onclick="resetarImportacaoCompra()">Importar outra planilha</button>
   </div>
 </div>
 
@@ -304,8 +352,21 @@ function custoUnitario(p){
   const tam=parseFloat(p.tamanhoEmbalagem)||0;const custo=parseFloat(p.custoEmbalagem)||0;
   return tam>0?custo/tam:0;
 }
-function custoServico(s,pMap){
-  return (s.receita||[]).reduce((acc,item)=>acc+(parseFloat(item.quantidade)||0)*custoUnitario(pMap[item.produtoId]||{}),0);
+// Custo real por unidade, calculado como média ponderada das compras (entradas) já importadas.
+// Sem compras registradas, cai para o custo estimado cadastrado manualmente no produto.
+function custoUnitarioReal(produtoId){
+  const p=produtoMap()[produtoId];
+  if(!p)return 0;
+  const entradasProduto=entradas.filter(e=>e.produtoId===produtoId);
+  const totalGasto=entradasProduto.reduce((s,e)=>s+(parseFloat(e.custoTotal)||0),0);
+  const totalEmbalagens=entradasProduto.reduce((s,e)=>s+(parseFloat(e.quantidade)||0),0);
+  const tam=parseFloat(p.tamanhoEmbalagem)||0;
+  const totalUnidades=totalEmbalagens*tam;
+  if(totalUnidades>0)return totalGasto/totalUnidades;
+  return custoUnitario(p);
+}
+function custoServico(s){
+  return (s.receita||[]).reduce((acc,item)=>acc+(parseFloat(item.quantidade)||0)*custoUnitarioReal(item.produtoId),0);
 }
 
 // ---------- estoque ----------
@@ -376,7 +437,8 @@ function renderizarProdutos(){
   const tbody=document.getElementById('produtos-tbody');
   if(!produtos.length){tbody.innerHTML='<tr><td colspan="8" class="vazio">Nenhum produto cadastrado</td></tr>';return;}
   tbody.innerHTML=produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(p=>{
-    const cu=custoUnitario(p);
+    const cu=custoUnitarioReal(p.id);
+    const temCompras=entradas.some(e=>e.produtoId===p.id);
     const est=estoqueAtual(p.id);
     const estEmb=p.tamanhoEmbalagem>0?est/p.tamanhoEmbalagem:est;
     const abaixoMin=p.estoqueMinimo&&estEmb<parseFloat(p.estoqueMinimo);
@@ -385,7 +447,7 @@ function renderizarProdutos(){
       <td>${escapeHtml(p.unidade)}</td>
       <td>${fmtNum(p.tamanhoEmbalagem,2)} ${escapeHtml(p.unidade)}</td>
       <td>${fmtMoeda(p.custoEmbalagem)}</td>
-      <td>${fmtMoeda(cu)}/${escapeHtml(p.unidade)}</td>
+      <td>${fmtMoeda(cu)}/${escapeHtml(p.unidade)} <span style="color:var(--texto-lt);font-size:10px">(${temCompras?'real, base compras':'estimado'})</span></td>
       <td>${fmtNum(est,1)} ${escapeHtml(p.unidade)} <span style="color:var(--texto-lt)">(${fmtNum(estEmb,2)} emb.)</span> ${abaixoMin?'<span class="badge badge-critico">baixo</span>':''}</td>
       <td>${p.estoqueMinimo?fmtNum(p.estoqueMinimo,2)+' emb.':'-'}</td>
       <td class="acoes-tabela">
@@ -416,7 +478,7 @@ window.salvarEntrada=async function(){
   const custoInformado=parseFloat(document.getElementById('entrada-custo').value);
   const custoTotal=!isNaN(custoInformado)?custoInformado:qtd*(parseFloat(p.custoEmbalagem)||0);
   const dados={produtoId,quantidade:qtd,custoTotal,data:document.getElementById('entrada-data').value||hojeStr(),
-    obs:document.getElementById('entrada-obs').value.trim(),ts:Date.now()};
+    obs:document.getElementById('entrada-obs').value.trim(),origem:'manual',ts:Date.now()};
   try{await setDoc(doc(db,COL.entradas,uid()),dados);toast('Entrada registrada!');fecharModal('modal-entrada');await carregarTudo();renderizarProdutos();}
   catch(e){toast('Erro: '+e.message);}
 };
@@ -471,7 +533,7 @@ function renderizarServicos(){
   const pMap=produtoMap();
   if(!servicos.length){el.innerHTML='<div class="card"><p class="vazio">Nenhum serviço cadastrado ainda.</p></div>';return;}
   el.innerHTML=servicos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(s=>{
-    const custo=custoServico(s,pMap);
+    const custo=custoServico(s);
     const itens=(s.receita||[]).map(i=>{const p=pMap[i.produtoId];return `<li>${p?escapeHtml(p.nome):'(produto removido)'} — ${fmtNum(i.quantidade,2)} ${p?escapeHtml(p.unidade):''}</li>`;}).join('')||'<li style="color:var(--texto-lt)">Sem receita definida</li>';
     return `<div class="card">
       <div class="row-flex" style="justify-content:space-between">
@@ -513,7 +575,7 @@ window.renderizarDashboard=function(){
     if(!porServico[a.servicoId])porServico[a.servicoId]={qtd:0,custo:0};
     porServico[a.servicoId].qtd+=qtdAt;
     if(!s)return;
-    const custoUnit=custoServico(s,pMap);
+    const custoUnit=custoServico(s);
     custoTotalPeriodo+=custoUnit*qtdAt;
     porServico[a.servicoId].custo+=custoUnit*qtdAt;
     (s.receita||[]).forEach(item=>{
@@ -560,13 +622,25 @@ window.renderizarDashboard=function(){
   else{
     stbody.innerHTML=servicos.slice().sort((a,b)=>a.nome.localeCompare(b.nome)).map(s=>{
       const d=porServico[s.id]||{qtd:0,custo:0};
-      return `<tr><td><strong>${escapeHtml(s.nome)}</strong></td><td>${fmtNum(d.qtd,0)}</td><td>${fmtMoeda(custoServico(s,pMap))}</td><td>${fmtMoeda(d.custo)}</td></tr>`;
+      return `<tr><td><strong>${escapeHtml(s.nome)}</strong></td><td>${fmtNum(d.qtd,0)}</td><td>${fmtMoeda(custoServico(s))}</td><td>${fmtMoeda(d.custo)}</td></tr>`;
     }).join('');
   }
 };
 
 // ---------- IMPORTAR ----------
 async function carregarSheetJS(){if(window.XLSX)return;await new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';s.onload=res;s.onerror=rej;document.head.appendChild(s);});}
+
+// .csv é lido como texto (via TextDecoder utf-8) para não corromper acentos;
+// SheetJS decide sozinho a codificação binária de .xlsx/.xls.
+async function lerPlanilha(file){
+  await carregarSheetJS();
+  if(/\.csv$/i.test(file.name)){
+    const texto=await file.text();
+    return XLSX.read(texto,{type:'string',raw:false,dateNF:'yyyy-mm-dd'});
+  }
+  const buf=await file.arrayBuffer();
+  return XLSX.read(buf,{type:'array',cellDates:true});
+}
 
 function configurarDropZone(){
   const dz=document.getElementById('drop-zone');
@@ -579,9 +653,7 @@ window.selecionarArquivo=async function(file){
   if(!file)return;
   document.getElementById('imp-arquivo-nome').textContent='Lendo '+file.name+'...';
   try{
-    await carregarSheetJS();
-    const buf=await file.arrayBuffer();
-    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const wb=await lerPlanilha(file);
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false,dateNF:'yyyy-mm-dd'});
     if(!rows.length){toast('Planilha vazia');return;}
@@ -753,6 +825,151 @@ window.resetarImportacao=function(){
   document.getElementById('imp-step-ok').classList.remove('ativa');
 };
 
+// ---------- IMPORTAR COMPRAS (NF) ----------
+let importStateCompra=null;
+
+function configurarDropZoneCompra(){
+  const dz=document.getElementById('drop-zone-compra');
+  dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('drag-over');});
+  dz.addEventListener('dragleave',()=>dz.classList.remove('drag-over'));
+  dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('drag-over');if(e.dataTransfer.files[0])selecionarArquivoCompra(e.dataTransfer.files[0]);});
+}
+
+window.selecionarArquivoCompra=async function(file){
+  if(!file)return;
+  document.getElementById('impc-arquivo-nome').textContent='Lendo '+file.name+'...';
+  try{
+    const wb=await lerPlanilha(file);
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false,dateNF:'yyyy-mm-dd'});
+    if(!rows.length){toast('Planilha vazia');return;}
+    importStateCompra={rows,headers:Object.keys(rows[0])};
+    document.getElementById('impc-arquivo-nome').textContent=`${file.name} — ${rows.length} linhas, ${importStateCompra.headers.length} colunas`;
+    montarSelectsMapeamentoCompra();
+    document.getElementById('impc-step-mapear').classList.add('ativa');
+    document.getElementById('impc-step-reconciliar').classList.remove('ativa');
+    document.getElementById('impc-step-ok').classList.remove('ativa');
+  }catch(e){console.error(e);toast('Erro ao ler arquivo: '+e.message);}
+};
+
+function montarSelectsMapeamentoCompra(){
+  const headers=importStateCompra.headers;
+  const opts=headers.map(h=>`<option value="${h}">${h}</option>`).join('');
+  document.getElementById('mapc-produto').innerHTML=opts;
+  document.getElementById('mapc-qtd').innerHTML=opts;
+  document.getElementById('mapc-valor').innerHTML=opts;
+  document.getElementById('mapc-data').innerHTML='<option value="">Não tem (usar data padrão abaixo)</option>'+opts;
+  document.getElementById('mapc-data-padrao').value=hojeStr();
+  const achar=(regex)=>headers.find(h=>regex.test(h.toLowerCase()));
+  const colProduto=achar(/produto|descri[çc][ãa]o|item|mercadoria/);
+  const colQtd=achar(/qtd|quantidade/);
+  const colValor=achar(/valor|preco|pre[çc]o|total/);
+  const colData=achar(/data/);
+  if(colProduto)document.getElementById('mapc-produto').value=colProduto;
+  if(colQtd)document.getElementById('mapc-qtd').value=colQtd;
+  if(colValor)document.getElementById('mapc-valor').value=colValor;
+  if(colData)document.getElementById('mapc-data').value=colData;
+}
+
+function paraNumero(v){
+  if(typeof v==='number')return v;
+  const s=String(v??'').trim().replace(/[^\d,.\-]/g,'');
+  if(!s)return 0;
+  // planilhas brasileiras costumam usar vírgula como separador decimal
+  const normalizado=s.includes(',')?s.replace(/\./g,'').replace(',','.'):s;
+  return parseFloat(normalizado)||0;
+}
+
+window.analisarCompra=function(){
+  const colProduto=document.getElementById('mapc-produto').value;
+  const colQtd=document.getElementById('mapc-qtd').value;
+  const colValor=document.getElementById('mapc-valor').value;
+  const valorTipo=document.getElementById('mapc-valor-tipo').value;
+  const colData=document.getElementById('mapc-data').value;
+  const dataPadrao=document.getElementById('mapc-data-padrao').value||hojeStr();
+  if(!colProduto||!colQtd||!colValor){toast('Escolha as colunas de produto, quantidade e valor');return;}
+  const linhas=importStateCompra.rows.map(r=>{
+    const quantidade=paraNumero(r[colQtd]);
+    const valor=paraNumero(r[colValor]);
+    const custoTotal=valorTipo==='unitario'?valor*quantidade:valor;
+    return{
+      produtoTexto:String(r[colProduto]||'').trim(),
+      quantidade,custoTotal,
+      data:colData?excelSerialParaData(r[colData]):dataPadrao,
+    };
+  }).filter(l=>l.produtoTexto&&l.quantidade>0);
+  if(!linhas.length){toast('Nenhuma linha válida encontrada');return;}
+  importStateCompra.linhas=linhas;
+  const valoresUnicos=[...new Set(linhas.map(l=>l.produtoTexto))];
+  importStateCompra.valoresUnicos=valoresUnicos;
+  importStateCompra.mapeamentoProdutos={};
+  const pList=produtos.slice().sort((a,b)=>a.nome.localeCompare(b.nome));
+  const el=document.getElementById('impc-reconciliar-lista');
+  el.innerHTML=`<div class="table-wrap"><table><thead><tr><th>Produto na planilha</th><th>Ocorrências</th><th>Total comprado</th><th>Valor total</th><th>Vincular a</th></tr></thead><tbody>${
+    valoresUnicos.map((v,idx)=>{
+      const linhasDoValor=linhas.filter(l=>l.produtoTexto===v);
+      const somaQtd=linhasDoValor.reduce((s,l)=>s+l.quantidade,0);
+      const somaValor=linhasDoValor.reduce((s,l)=>s+l.custoTotal,0);
+      const match=pList.find(p=>p.nome.toLowerCase()===v.toLowerCase());
+      importStateCompra.mapeamentoProdutos[v]=match?match.id:'__novo__';
+      const options=pList.map(p=>`<option value="${p.id}" ${match&&match.id===p.id?'selected':''}>${escapeHtml(p.nome)}</option>`).join('');
+      return `<tr><td><strong>${escapeHtml(v)}</strong></td><td>${linhasDoValor.length}</td><td>${fmtNum(somaQtd,2)}</td><td>${fmtMoeda(somaValor)}</td>
+        <td><select data-idx="${idx}" onchange="importStateCompra_setMapeamento(this.dataset.idx,this.value)">
+          <option value="__novo__" ${!match?'selected':''}>+ Criar novo produto "${escapeHtml(v)}"</option>
+          ${options}
+        </select></td></tr>`;
+    }).join('')
+  }</tbody></table></div>`;
+  document.getElementById('impc-resumo').textContent=`${linhas.length} linhas, ${valoresUnicos.length} produtos diferentes encontrados.`;
+  document.getElementById('impc-step-reconciliar').classList.add('ativa');
+};
+window.importStateCompra_setMapeamento=function(idx,produtoId){importStateCompra.mapeamentoProdutos[importStateCompra.valoresUnicos[idx]]=produtoId;};
+
+window.confirmarImportacaoCompra=async function(btn){
+  if(!importStateCompra||!importStateCompra.linhas)return;
+  btn.disabled=true;btn.textContent='Importando...';
+  try{
+    const criarProduto=async(nome)=>{
+      const linhasDoProduto=importStateCompra.linhas.filter(l=>l.produtoTexto===nome);
+      const somaQtd=linhasDoProduto.reduce((s,l)=>s+l.quantidade,0);
+      const somaValor=linhasDoProduto.reduce((s,l)=>s+l.custoTotal,0);
+      const precoMedioUnitario=somaQtd>0?somaValor/somaQtd:0;
+      const id=uid();
+      await setDoc(doc(db,COL.produtos,id),{nome,unidade:'un',tamanhoEmbalagem:1,custoEmbalagem:precoMedioUnitario,estoqueMinimo:0});
+      return id;
+    };
+    const cacheNovos={};
+    const importId=uid();
+    let criados=0;
+    for(const[valor,alvo]of Object.entries(importStateCompra.mapeamentoProdutos)){
+      if(alvo==='__novo__'&&!cacheNovos[valor]){cacheNovos[valor]=await criarProduto(valor);criados++;}
+    }
+    let ok=0;
+    for(const l of importStateCompra.linhas){
+      const alvo=importStateCompra.mapeamentoProdutos[l.produtoTexto];
+      const produtoId=alvo==='__novo__'?cacheNovos[l.produtoTexto]:alvo;
+      if(!produtoId)continue;
+      await setDoc(doc(db,COL.entradas,uid()),{produtoId,quantidade:l.quantidade,custoTotal:l.custoTotal,data:l.data,obs:'Importação NF',origem:'importacao_nf',importId,ts:Date.now()});
+      ok++;
+    }
+    await carregarTudo();
+    document.getElementById('impc-ok-msg').textContent=`${ok} entradas de estoque importadas. ${criados>0?criados+' novo(s) produto(s) criado(s) com unidade "un" e tamanho de embalagem 1 — ajuste em "Produtos" se a unidade de compra for outra (ex: galão de 3,6L).':''}`;
+    document.getElementById('impc-step-mapear').classList.remove('ativa');
+    document.getElementById('impc-step-reconciliar').classList.remove('ativa');
+    document.getElementById('impc-step-ok').classList.add('ativa');
+    toast('Importação concluída!');
+  }catch(e){console.error(e);toast('Erro na importação: '+e.message);}
+  btn.disabled=false;btn.textContent='Confirmar e importar';
+};
+window.resetarImportacaoCompra=function(){
+  importStateCompra=null;
+  document.getElementById('impc-arquivo-nome').textContent='';
+  document.getElementById('file-input-compra').value='';
+  document.getElementById('impc-step-mapear').classList.remove('ativa');
+  document.getElementById('impc-step-reconciliar').classList.remove('ativa');
+  document.getElementById('impc-step-ok').classList.remove('ativa');
+};
+
 // ---------- HISTORICO ----------
 window.excluirAtendimento=async function(id){
   if(!confirm('Excluir este atendimento do histórico? Isso recalcula o consumo e o estoque.'))return;
@@ -785,7 +1002,7 @@ window.renderizarHistorico=function(){
       const t=new Date((e.data||'1970-01-01')+'T12:00:00').getTime();
       if(t<tsD||t>tsA)return;
       const p=pMap[e.produtoId];
-      linhas.push({data:e.data,tipo:'Entrada',desc:`${p?escapeHtml(p.nome):'(produto removido)'} — ${fmtMoeda(e.custoTotal)}`,qtd:e.quantidade,origem:'Manual',acao:`<button class="btn-danger btn btn-sm" onclick="excluirEntrada('${e.id}')">Excluir</button>`});
+      linhas.push({data:e.data,tipo:'Entrada',desc:`${p?escapeHtml(p.nome):'(produto removido)'} — ${fmtMoeda(e.custoTotal)}`,qtd:e.quantidade,origem:e.origem==='importacao_nf'?'Importação NF':'Manual',acao:`<button class="btn-danger btn btn-sm" onclick="excluirEntrada('${e.id}')">Excluir</button>`});
     });
   }
   linhas.sort((a,b)=>(b.data||'').localeCompare(a.data||''));
@@ -797,6 +1014,7 @@ window.renderizarHistorico=function(){
 // ---------- INIT ----------
 window.addEventListener('DOMContentLoaded',async()=>{
   configurarDropZone();
+  configurarDropZoneCompra();
   document.getElementById('hist-de').value='';
   document.getElementById('hist-ate').value='';
   await carregarTudo();
