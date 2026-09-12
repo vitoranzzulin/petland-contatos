@@ -65,7 +65,7 @@ td{padding:8px 10px;border-bottom:1px solid var(--cinza-borda);vertical-align:mi
 .receita-item{display:flex;gap:8px;align-items:center;margin-bottom:6px;padding:6px 8px;background:var(--cinza-bg);border-radius:8px;}
 .receita-item span{flex:1;font-size:12px;}
 .step{display:none;}
-.step.ativo{display:block;}
+.step.ativa{display:block;}
 .steps-nav{display:flex;gap:6px;margin-bottom:14px;}
 .step-dot{width:26px;height:26px;border-radius:50%;background:var(--cinza-borda);color:var(--texto-lt);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;}
 .step-dot.ativo{background:var(--verde);color:white;}
@@ -165,7 +165,10 @@ td{padding:8px 10px;border-bottom:1px solid var(--cinza-borda);vertical-align:mi
       <div class="field"><label>Coluna de serviço/adicional</label><select id="map-servico"></select></div>
       <div class="field"><label>Coluna de quantidade (opcional)</label><select id="map-qtd"><option value="">Não tem (assume 1 por linha)</option></select></div>
     </div>
-    <button class="btn" onclick="analisarPlanilha()">Analisar planilha</button>
+    <div class="help-box">Nem toda linha da planilha foi de fato realizada (pode haver agendamentos futuros, cancelamentos, orçamentos não pagos). Use os filtros abaixo para marcar quais valores contam como "realizado". Ex: Status = "ORÇAMENTO ENVIADO" e Status Varejo = "PAGO".</div>
+    <div id="imp-filtros-lista"></div>
+    <button class="btn-sec btn btn-sm" onclick="adicionarFiltroImportacao()">+ Adicionar filtro</button>
+    <div style="margin-top:14px"><button class="btn" onclick="analisarPlanilha()">Analisar planilha</button></div>
   </div>
 
   <div class="card step" id="imp-step-reconciliar">
@@ -582,9 +585,10 @@ window.selecionarArquivo=async function(file){
     const ws=wb.Sheets[wb.SheetNames[0]];
     const rows=XLSX.utils.sheet_to_json(ws,{defval:'',raw:false,dateNF:'yyyy-mm-dd'});
     if(!rows.length){toast('Planilha vazia');return;}
-    importState={rows,headers:Object.keys(rows[0])};
+    importState={rows,headers:Object.keys(rows[0]),filtros:[]};
     document.getElementById('imp-arquivo-nome').textContent=`${file.name} — ${rows.length} linhas, ${importState.headers.length} colunas`;
     montarSelectsMapeamento();
+    renderizarFiltrosImportacao();
     document.getElementById('imp-step-mapear').classList.add('ativa');
     document.getElementById('imp-step-reconciliar').classList.remove('ativa');
     document.getElementById('imp-step-ok').classList.remove('ativa');
@@ -598,10 +602,64 @@ function montarSelectsMapeamento(){
   document.getElementById('map-servico').innerHTML=opts;
   document.getElementById('map-qtd').innerHTML='<option value="">Não tem (assume 1 por linha)</option>'+opts;
   const achar=(regex)=>headers.find(h=>regex.test(h.toLowerCase()));
-  const colData=achar(/data/);const colServ=achar(/servi|adicional|produto|tipo/);const colQtd=achar(/qtd|quantidade/);
+  const colData=achar(/data/);
+  const colServ=achar(/^servi[çc]o$/)||headers.find(h=>/servi[çc]o|adicional|tipo/.test(h.toLowerCase())&&!/^id\b/.test(h.toLowerCase()))||achar(/servi|adicional|produto|tipo/);
+  const colQtd=achar(/qtd|quantidade/);
   if(colData)document.getElementById('map-data').value=colData;
   if(colServ)document.getElementById('map-servico').value=colServ;
   if(colQtd)document.getElementById('map-qtd').value=colQtd;
+}
+
+const FILTRO_POSITIVO=/pago|enviado|finalizado|aprovado|conclu|realizad/i;
+const FILTRO_NEGATIVO=/cancel|agendad|pendente|recusad|estorn/i;
+
+window.adicionarFiltroImportacao=function(){
+  importState.filtros.push({coluna:'',valoresMarcados:new Set()});
+  renderizarFiltrosImportacao();
+};
+window.removerFiltroImportacao=function(idx){
+  importState.filtros.splice(idx,1);
+  renderizarFiltrosImportacao();
+};
+window.filtroImportacao_setColuna=function(idx,coluna){
+  const f=importState.filtros[idx];f.coluna=coluna;f.valoresMarcados=new Set();
+  if(coluna){
+    const valoresUnicos=[...new Set(importState.rows.map(r=>String(r[coluna]??'').trim()))];
+    valoresUnicos.forEach(v=>{if(FILTRO_POSITIVO.test(v)&&!FILTRO_NEGATIVO.test(v))f.valoresMarcados.add(v);});
+  }
+  renderizarFiltrosImportacao();
+};
+window.filtroImportacao_toggleValor=function(idx,valor,checked){
+  const f=importState.filtros[idx];
+  if(checked)f.valoresMarcados.add(valor);else f.valoresMarcados.delete(valor);
+};
+function renderizarFiltrosImportacao(){
+  const el=document.getElementById('imp-filtros-lista');
+  if(!importState||!importState.filtros.length){el.innerHTML='';return;}
+  el.innerHTML=importState.filtros.map((f,idx)=>{
+    const headerOpts=importState.headers.map(h=>`<option value="${h}" ${f.coluna===h?'selected':''}>${escapeHtml(h)}</option>`).join('');
+    let valoresHtml='';
+    if(f.coluna){
+      const contagem={};
+      importState.rows.forEach(r=>{const v=String(r[f.coluna]??'').trim();contagem[v]=(contagem[v]||0)+1;});
+      const valoresUnicos=Object.keys(contagem).sort((a,b)=>contagem[b]-contagem[a]);
+      valoresHtml=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${
+        valoresUnicos.map(v=>`<label style="display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;text-transform:none;background:var(--cinza-bg);padding:4px 8px;border-radius:6px">
+          <input type="checkbox" ${f.valoresMarcados.has(v)?'checked':''} data-idx="${idx}" data-valor="${escapeHtml(v)}" onchange="filtroImportacao_toggleValor(this.dataset.idx,this.dataset.valor,this.checked)">
+          ${escapeHtml(v||'(vazio)')} <span style="color:var(--texto-lt)">(${contagem[v]})</span>
+        </label>`).join('')
+      }</div>`;
+    }
+    return `<div class="receita-item" style="flex-direction:column;align-items:stretch;gap:6px">
+      <div class="row-flex" style="justify-content:space-between">
+        <select onchange="filtroImportacao_setColuna(${idx},this.value)" style="flex:1;max-width:280px">
+          <option value="">Escolha a coluna...</option>${headerOpts}
+        </select>
+        <button class="btn-danger btn btn-sm" onclick="removerFiltroImportacao(${idx})">Remover filtro</button>
+      </div>
+      ${valoresHtml}
+    </div>`;
+  }).join('');
 }
 
 function excelSerialParaData(v){
@@ -620,12 +678,14 @@ window.analisarPlanilha=function(){
   const colServ=document.getElementById('map-servico').value;
   const colQtd=document.getElementById('map-qtd').value;
   if(!colData||!colServ){toast('Escolha as colunas de data e serviço');return;}
-  const linhas=importState.rows.map(r=>({
+  const filtrosAtivos=importState.filtros.filter(f=>f.coluna&&f.valoresMarcados.size>0);
+  const linhasFiltradas=importState.rows.filter(r=>filtrosAtivos.every(f=>f.valoresMarcados.has(String(r[f.coluna]??'').trim())));
+  const linhas=linhasFiltradas.map(r=>({
     data:excelSerialParaData(r[colData]),
     servicoTexto:String(r[colServ]||'').trim(),
     quantidade:colQtd&&r[colQtd]!==''?(parseFloat(r[colQtd])||1):1,
   })).filter(l=>l.servicoTexto);
-  if(!linhas.length){toast('Nenhuma linha válida encontrada');return;}
+  if(!linhas.length){toast('Nenhuma linha válida encontrada com os filtros escolhidos');return;}
   importState.linhas=linhas;
   const valoresUnicos=[...new Set(linhas.map(l=>l.servicoTexto))];
   importState.valoresUnicos=valoresUnicos;
@@ -645,7 +705,8 @@ window.analisarPlanilha=function(){
         </select></td></tr>`;
     }).join('')
   }</tbody></table></div>`;
-  document.getElementById('imp-resumo').textContent=`${linhas.length} linhas, ${valoresUnicos.length} tipos de serviço encontrados.`;
+  const descartadas=importState.rows.length-linhasFiltradas.length;
+  document.getElementById('imp-resumo').textContent=`${linhas.length} linhas consideradas (de ${importState.rows.length} na planilha${descartadas>0?', '+descartadas+' descartadas pelos filtros':''}), ${valoresUnicos.length} tipos de serviço encontrados.`;
   document.getElementById('imp-step-reconciliar').classList.add('ativa');
 };
 window.importState_setMapeamento=function(idx,servicoId){importState.mapeamentoServicos[importState.valoresUnicos[idx]]=servicoId;};
@@ -686,6 +747,7 @@ window.resetarImportacao=function(){
   importState=null;
   document.getElementById('imp-arquivo-nome').textContent='';
   document.getElementById('file-input').value='';
+  document.getElementById('imp-filtros-lista').innerHTML='';
   document.getElementById('imp-step-mapear').classList.remove('ativa');
   document.getElementById('imp-step-reconciliar').classList.remove('ativa');
   document.getElementById('imp-step-ok').classList.remove('ativa');
